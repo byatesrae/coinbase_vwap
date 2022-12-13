@@ -18,7 +18,7 @@ func (p position) TotalPrice() float64 {
 	return p.units * p.unitPrice
 }
 
-// SlidingWindowVWAP uses a sliding window of positions to calculated a VWAP.
+// SlidingWindowVWAP uses a sliding window of positions to calculate a VWAP.
 //
 // The zero-value of this type has no capacity, and therefore no utility.
 type SlidingWindowVWAP struct {
