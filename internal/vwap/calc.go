@@ -1,8 +1,6 @@
 package vwap
 
-import (
-	"github.com/byatesrae/coinbase_vwap/internal/slidingslice"
-)
+import "github.com/byatesrae/coinbase_vwap/internal/platform/slidingslice"
 
 // position represents a single trade (buy or sell).
 type position struct {
@@ -42,6 +40,10 @@ func NewSlidingWindowVWAP(windowCapacity int) *SlidingWindowVWAP {
 // Add records a new trade (the number of units traded and the price paid per unit)
 // in the window. The return value is the new VWAP.
 func (s *SlidingWindowVWAP) Add(units, unitPrice float64) float64 {
+	if s.positions == nil {
+		return 0
+	}
+
 	var poppedValue *position
 
 	// If len == cap, pushing will pop the first element. Keep track of it.

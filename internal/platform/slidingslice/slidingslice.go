@@ -26,7 +26,7 @@ func (s *SlidingSlice[T]) At(a int) T {
 		panic("index outside of range")
 	}
 
-	a = (a + s.startIndex) % (s.Cap() - 1)
+	a = (a + s.startIndex) % s.Cap()
 
 	return s.values[a]
 }
