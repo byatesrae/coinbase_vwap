@@ -1,5 +1,3 @@
-HANDLE ERRORS!!!
-
 Client package does a lot
 
 using floating point
