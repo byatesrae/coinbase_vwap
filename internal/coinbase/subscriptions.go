@@ -128,9 +128,7 @@ func (m *MatchesSubscription) startReading() {
 			switch message.Type {
 			case "error":
 				m.read <- &MatchResponse{Err: fmt.Errorf("error message received: %q", message.Message)}
-			case "last_match":
-				fallthrough
-			case "match":
+			case "last_match", "match":
 				m.read <- &MatchResponse{Match: message}
 			case "subscriptions":
 			default:

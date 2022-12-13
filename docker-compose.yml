@@ -1,0 +1,10 @@
+version: "3.5"
+services:
+  coinbase-vwap:
+    container_name: coinbase-vwap
+    image: coinbase-vwap
+    build:
+      context: .
+    working_dir: /opt/app
+    volumes:
+      - .:/opt/app

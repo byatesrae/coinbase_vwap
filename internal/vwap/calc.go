@@ -25,7 +25,7 @@ func NewSlidingWindowVWAP(windowCapacity int) *SlidingWindowVWAP {
 	}
 }
 
-func (s *SlidingWindowVWAP) Add(units float64, unitPrice float64) float64 {
+func (s *SlidingWindowVWAP) Add(units, unitPrice float64) float64 {
 	var poppedValue *position
 
 	// If len == cap, pushing will pop the first. Keep track of it.

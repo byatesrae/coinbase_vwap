@@ -44,20 +44,20 @@ type MatchResponse struct {
 	Err   error
 }
 
-func (m *MatchResponse) ToUnitsAndUnitPrice() (float64, float64, error) {
+func (m *MatchResponse) ToUnitsAndUnitPrice() (units, unitPrice float64, err error) {
 	if m.Err != nil {
 		return 0, 0, fmt.Errorf("match response: %w", m.Err)
 	}
 
-	units, err := strconv.ParseFloat(m.Match.Size, 64)
+	units, err = strconv.ParseFloat(m.Match.Size, 64)
 	if err != nil {
 		return 0, 0, fmt.Errorf("parse units from size: %w", err)
 	}
 
-	unitPrice, err := strconv.ParseFloat(m.Match.Price, 64)
+	unitPrice, err = strconv.ParseFloat(m.Match.Price, 64)
 	if err != nil {
 		return 0, 0, fmt.Errorf("parse unitPrice from price: %w", err)
 	}
 
-	return units, unitPrice, err
+	return
 }
