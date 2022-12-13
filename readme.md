@@ -18,4 +18,6 @@ it 3 seconds but the websocket read blocks for minutes at a time.
 
 logging
 
+use compression? (in coinbase notes)
+
 a bunch of auxilery stuff (e.g shell scripts, docker files, makefile) copy pasted from a previous project

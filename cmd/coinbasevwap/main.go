@@ -16,21 +16,19 @@ import (
 )
 
 func main() {
-	err := runApp(log.Writer())
+	err := runApp(&coinbase.Client{}, log.Writer())
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func runApp(output io.Writer) error {
+func runApp(coinbaseClient *coinbase.Client, output io.Writer) error {
 	ctx := context.Background()
-
-	coinbaseClient := coinbase.Client{}
 
 	log.Print("[INF] Creating subscriptions...\n")
 	subscriptions, err := subscribeToAll(
 		ctx,
-		&coinbaseClient,
+		coinbaseClient,
 		[]coinbase.ProductID{
 			coinbase.ProductIDBtcUsd,
 			coinbase.ProductIDEthUsd,

@@ -3,8 +3,6 @@ package coinbase
 import (
 	"context"
 	"fmt"
-
-	"github.com/gorilla/websocket"
 )
 
 // MatchesSubscription is created by a Client to manage a subscription to the [Matches Channel].
@@ -13,14 +11,14 @@ import (
 type MatchesSubscription struct {
 	productID ProductID
 
-	conn *websocket.Conn
+	conn Conn
 	read chan *MatchResponse // Read channel, pushed to by the connection read loop
 
 	stopReading      chan struct{}
 	isReadingStopped bool
 }
 
-func newMatchesSubscription(ctx context.Context, conn *websocket.Conn, productID ProductID) (*MatchesSubscription, error) {
+func newMatchesSubscription(ctx context.Context, conn Conn, productID ProductID) (*MatchesSubscription, error) {
 	if productID == ProductIDUnknown {
 		return nil, fmt.Errorf("productID is required")
 	}

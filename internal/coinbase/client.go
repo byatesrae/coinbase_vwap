@@ -3,20 +3,18 @@ package coinbase
 import (
 	"context"
 	"fmt"
-
-	"github.com/gorilla/websocket"
 )
 
 type Client struct {
-	Dialer *websocket.Dialer
+	Dialer Dialer
 }
 
-func (c *Client) dialerOrDefault() *websocket.Dialer {
+func (c *Client) dialerOrDefault() Dialer {
 	if c.Dialer != nil {
 		return c.Dialer
 	}
 
-	return &websocket.Dialer{}
+	return NewGorillaWebsocketDialler(nil)
 }
 
 // SubscribeToMatchesForProduct will dial a new websocket connection and [Subscribe]
