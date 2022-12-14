@@ -1,3 +1,5 @@
+// package vwap provides a way to calculate a volume-weighted average price in a
+// sliding window of trades.
 package vwap
 
 import "github.com/byatesrae/coinbase_vwap/internal/platform/slidingslice"
