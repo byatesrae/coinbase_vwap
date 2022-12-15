@@ -65,12 +65,12 @@ func TestMatchesSubscriptionRead(t *testing.T) {
 			ctx, ctxCancel := context.WithCancel(context.Background())
 			t.Cleanup(ctxCancel)
 
-			ms := newMatchesSubscriptionWithNext(t, ctx, nil, nil)
+			ms := newMatchesSubscriptionWithNext(ctx, t, nil, nil)
 			t.Cleanup(func() {
 				ctx, ctxCancel := context.WithTimeout(context.Background(), time.Second)
 				defer ctxCancel()
 
-				ms.fillAndDrainRead(t, ctx) // Make sure the read isn't blocked
+				ms.fillAndDrainRead(ctx, t) // Make sure the read isn't blocked
 
 				if err := ms.matchesSubscription.Close(ctx); err != nil {
 					t.Errorf("Failed to close test MatchesSubscription: %v", err)
@@ -112,9 +112,9 @@ func TestMatchesSubscriptionClose(t *testing.T) {
 		ctx, ctxCancel := context.WithCancel(context.Background())
 		t.Cleanup(ctxCancel)
 
-		ms := newMatchesSubscriptionWithNext(t, ctx, nil, nil)
+		ms := newMatchesSubscriptionWithNext(ctx, t, nil, nil)
 
-		ms.fillAndDrainRead(t, ctx)
+		ms.fillAndDrainRead(ctx, t)
 
 		// Do
 
@@ -136,9 +136,9 @@ func TestMatchesSubscriptionClose(t *testing.T) {
 		ctx, ctxCancel := context.WithCancel(context.Background())
 		t.Cleanup(ctxCancel)
 
-		ms := newMatchesSubscriptionWithNext(t, ctx, nil, func() error { return fmt.Errorf("TestABC") })
+		ms := newMatchesSubscriptionWithNext(ctx, t, nil, func() error { return fmt.Errorf("TestABC") })
 
-		ms.fillAndDrainRead(t, ctx)
+		ms.fillAndDrainRead(ctx, t)
 
 		// Do
 
@@ -160,7 +160,7 @@ func TestMatchesSubscriptionClose(t *testing.T) {
 		ctx, ctxCancel := context.WithCancel(context.Background())
 		t.Cleanup(ctxCancel)
 
-		ms := newMatchesSubscriptionWithNext(t, ctx, nil, nil)
+		ms := newMatchesSubscriptionWithNext(ctx, t, nil, nil)
 
 		ms.readIn <- &matchesNext{match: &Match{Type: MessageTypeMatch}} // Block until we know the read loop is running.
 
@@ -184,7 +184,7 @@ func TestMatchesSubscriptionClose(t *testing.T) {
 		ctx, ctxCancel := context.WithCancel(context.Background())
 		t.Cleanup(ctxCancel)
 
-		ms := newMatchesSubscriptionWithNext(t, ctx, nil, func() error { return fmt.Errorf("TestABC") })
+		ms := newMatchesSubscriptionWithNext(ctx, t, nil, func() error { return fmt.Errorf("TestABC") })
 
 		ms.readIn <- &matchesNext{match: &Match{Type: MessageTypeMatch}} // Block until we know the read loop is running.
 
@@ -223,7 +223,7 @@ type matchesSubscriptionWithNext struct {
 //   - ctx - used to signal that the matchesNext push loop should exit. See field readIn.
 //   - writeJSONFunc- override for MatchesSubscription.Conn's WriteJSON method. If nil, a default is used.
 //   - closeFunc - override for MatchesSubscription.Conn's Close method. If nil, a default is used.
-func newMatchesSubscriptionWithNext(t *testing.T, ctx context.Context, writeJSONFunc func(v interface{}) error, closeFunc func() error) *matchesSubscriptionWithNext {
+func newMatchesSubscriptionWithNext(ctx context.Context, t *testing.T, writeJSONFunc func(v interface{}) error, closeFunc func() error) *matchesSubscriptionWithNext {
 	t.Helper()
 
 	if writeJSONFunc == nil {
@@ -273,7 +273,7 @@ func newMatchesSubscriptionWithNext(t *testing.T, ctx context.Context, writeJSON
 // fillAndDrainRead will fill and drain the MatchesSubscription's Read channel. This
 // is useful in simulating a read loop not blocked on MatchesSubscription.Conn's
 // ReadJSON method.
-func (m *matchesSubscriptionWithNext) fillAndDrainRead(t *testing.T, ctx context.Context) {
+func (m *matchesSubscriptionWithNext) fillAndDrainRead(ctx context.Context, t *testing.T) {
 	t.Helper()
 
 	go func() {
