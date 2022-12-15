@@ -19,3 +19,5 @@ logging
 use compression? (in coinbase notes)
 
 a bunch of auxilery stuff (e.g shell scripts, docker files, makefile) copy pasted from a previous project
+
+Coinbase doco updated while I was halfway through implementation. The link referenced from the Code Evaluation no longer works (at the time of writing this) - https://docs.cloud.coinbase.com/exchange/docs/#the-matches-channel

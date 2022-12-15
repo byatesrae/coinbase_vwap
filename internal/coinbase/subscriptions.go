@@ -12,12 +12,20 @@ type MatchesSubscription struct {
 	productID ProductID
 
 	conn Conn
-	read chan *MatchResponse // Read channel, pushed to by the connection read loop
 
-	stopReading      chan struct{}
+	// A read channel, pushed to by the connection read loop
+	read chan *MatchResponse
+
+	// A channel to signal the read loop to stop.
+	stopReading chan struct{}
+
+	// True if the reading loop has been stopped.
 	isReadingStopped bool
 }
 
+// newMatchesSubscription creates a new MatchesSubscription. It will first subscribe
+// to the Matches Channel for productID over conn (using ctx). If this is successful,
+// the read loop is started.
 func newMatchesSubscription(ctx context.Context, conn Conn, productID ProductID) (*MatchesSubscription, error) {
 	if productID == ProductIDUnknown {
 		return nil, fmt.Errorf("productID is required")
@@ -50,6 +58,7 @@ func newMatchesSubscription(ctx context.Context, conn Conn, productID ProductID)
 	return m, nil
 }
 
+// ProductID returns the Product ID for this subscription.
 func (m *MatchesSubscription) ProductID() ProductID {
 	return m.productID
 }
@@ -60,6 +69,7 @@ func (m *MatchesSubscription) Read() <-chan *MatchResponse {
 	return m.read
 }
 
+// Close can be used to close the subscription.
 func (m *MatchesSubscription) Close(ctx context.Context) error {
 	stopReadingDone := make(chan struct{})
 	go func() {
@@ -114,6 +124,8 @@ func (m *MatchesSubscription) startReading() {
 
 			message := Match{}
 			if err := m.conn.ReadJSON(&message); err != nil {
+				// if m.read's buffer is full and not being drained, this would
+				// block indefinitely.
 				m.read <- &MatchResponse{Err: fmt.Errorf("read match: %w", err)}
 
 				// There's no recovery here, if we keep invoking conn.ReadJSON it
@@ -124,11 +136,11 @@ func (m *MatchesSubscription) startReading() {
 			}
 
 			switch message.Type {
-			case "error":
+			case MessageTypeError:
 				m.read <- &MatchResponse{Err: fmt.Errorf("error message received: %q", message.Message)}
-			case "last_match", "match":
+			case MessageTypeLastMatch, MessageTypeMatch:
 				m.read <- &MatchResponse{Match: message}
-			case "subscriptions":
+			case MessageTypeSubscriptions:
 			default:
 				m.read <- &MatchResponse{Err: fmt.Errorf("received unexpected message with type %q", message.Type)}
 			}

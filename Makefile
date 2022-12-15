@@ -10,6 +10,10 @@ deps: ## Installs dependencies
 deps-upgrade: ## Installs/upgrades all dependencies
 	@./build/deps-upgrade.sh
 
+.PHONY: generate-code
+generate-code: ## Generates all generated code
+	@./build/generate-code.sh
+
 .PHONY: lint
 lint: ## Runs linting
 	@./build/lint.sh

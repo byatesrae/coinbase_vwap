@@ -5,7 +5,9 @@ import (
 	"fmt"
 )
 
+// Client can be used to integrate with the Coinbase API.
 type Client struct {
+	// The Dialer used to open a connection. If nil, a default is used.
 	Dialer Dialer
 }
 
@@ -14,7 +16,7 @@ func (c *Client) dialerOrDefault() Dialer {
 		return c.Dialer
 	}
 
-	return NewGorillaWebsocketDialler(nil)
+	return newGorillaWebsocketDialler(nil)
 }
 
 // SubscribeToMatchesForProduct will dial a new websocket connection and [Subscribe]
