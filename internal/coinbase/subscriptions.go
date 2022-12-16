@@ -36,7 +36,7 @@ func newMatchesSubscription(ctx context.Context, conn Conn, productID ProductID)
 		Type: "subscribe",
 		Channels: []SubscribeChannelRequest{
 			{
-				Name: channelNameMatches,
+				Name: ChannelNameMatches,
 				ProductIDs: []ProductID{
 					productID,
 				},

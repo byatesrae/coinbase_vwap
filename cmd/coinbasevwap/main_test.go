@@ -17,123 +17,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type matchesIn struct {
-	matchType coinbase.MessageType
-	size      string
-	price     string
-	message   string
-}
-
-func newDialerFake(ctx context.Context, t *testing.T, wg *sync.WaitGroup, matchesIn []*matchesIn) *DialerMock {
-	return &DialerMock{
-		DialContextFunc: func(_ context.Context, _ string, _ http.Header) (coinbase.Conn, *http.Response, error) {
-			subscribedProductID := coinbase.ProductIDUnknown
-			subscribedProductIDMu := sync.Mutex{}
-
-			readCountRemaining := int32(len(matchesIn))
-
-			closed := make(chan struct{})
-
-			return &ConnMock{
-				WriteJSONFunc: func(v interface{}) error {
-					select {
-					case <-ctx.Done():
-						return fmt.Errorf("test ctx is done: %w", ctx.Err())
-					case <-closed:
-						return fmt.Errorf("test, WriteJSON called after close")
-					default:
-					}
-
-					subscribeRequest, ok := v.(coinbase.SubscribeRequest)
-					if !ok {
-						return nil
-					}
-
-					if len(subscribeRequest.ProductIDs) != 0 ||
-						len(subscribeRequest.Channels) != 1 ||
-						len(subscribeRequest.Channels[0].ProductIDs) != 1 {
-						return nil
-					}
-
-					subscribedProductIDMu.Lock()
-					defer subscribedProductIDMu.Unlock()
-
-					subscribedProductID = subscribeRequest.Channels[0].ProductIDs[0]
-
-					return nil
-				},
-				ReadJSONFunc: func(v interface{}) error {
-					select {
-					case <-ctx.Done():
-						return fmt.Errorf("test ctx is done: %w", ctx.Err())
-					case <-closed:
-						return fmt.Errorf("test, ReadJSON called after close")
-					default:
-					}
-
-					count := atomic.LoadInt32(&readCountRemaining)
-
-					if count == 0 {
-						<-closed
-						return fmt.Errorf("test, close called during ReadJSON")
-					}
-
-					defer func() {
-						if atomic.AddInt32(&readCountRemaining, -1) == 0 {
-							wg.Done()
-						}
-					}()
-
-					require.IsType(t, (*coinbase.Match)(nil), v, "")
-					matchIn, ok := v.(*coinbase.Match)
-					if !ok {
-						return nil
-					}
-
-					subscribedProductIDMu.Lock()
-					productID := subscribedProductID
-					subscribedProductIDMu.Unlock()
-
-					*matchIn = coinbase.Match{
-						Type:      matchesIn[count-1].matchType,
-						ProductID: productID,
-						Size:      matchesIn[count-1].size,
-						Price:     matchesIn[count-1].price,
-						Message:   matchesIn[count-1].message,
-					}
-
-					return nil
-				},
-				CloseFunc: func() error {
-					select {
-					case <-ctx.Done():
-						return fmt.Errorf("test ctx is done: %w", ctx.Err())
-					default:
-					}
-
-					close(closed)
-
-					return nil
-				},
-			}, nil, nil
-		},
-	}
-}
-
-type stringBuilderMutex struct {
-	sb strings.Builder
-	mu sync.Mutex
-}
-
-func (s *stringBuilderMutex) Write(p []byte) (int, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	return s.sb.Write(p)
-}
-
-func TestSubscribes(t *testing.T) {
+func TestSubscribesReadsAndExits(t *testing.T) {
 	t.Parallel()
+
+	// Setup
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	t.Cleanup(ctxCancel)
@@ -167,7 +54,9 @@ func TestSubscribes(t *testing.T) {
 
 	exited := make(chan struct{})
 
-	go func() {
+	// Do
+
+	go func() { // Run app
 		err := runApp(coinbaseClient, &sbWithMutex, interrupt)
 
 		assert.NoError(t, err, "runApp error.")
@@ -175,11 +64,13 @@ func TestSubscribes(t *testing.T) {
 		close(exited)
 	}()
 
-	wgForAllSubscriptionReads.Wait()
+	wgForAllSubscriptionReads.Wait() // Wait for all expected match reads
 
-	interrupt <- os.Interrupt
+	interrupt <- os.Interrupt // Interrupt the app
 
-	<-exited
+	<-exited // Wait for app to exit
+
+	// Assert
 
 	output := sbWithMutex.sb.String()
 	outputLines := strings.Split(output, "\n")
@@ -200,4 +91,143 @@ func TestSubscribes(t *testing.T) {
 	assert.Contains(t, outputLines, "\"ETH-USD\" ERROR: match response: read match: test, close called during ReadJSON")
 	assert.Contains(t, outputLines, "\"ETH-BTC\" ERROR: match response: read match: test, close called during ReadJSON")
 	assert.Contains(t, outputLines, "\"BTC-USD\" ERROR: match response: read match: test, close called during ReadJSON")
+}
+
+// stringBuilderMutex wraps a stringbuilder and implements io.writer with a mutex.
+type stringBuilderMutex struct {
+	sb strings.Builder
+	mu sync.Mutex
+}
+
+func (s *stringBuilderMutex) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.sb.Write(p)
+}
+
+// matchesIn represents matches read from the Dialer fake (see newDialerFake).
+type matchesIn struct {
+	matchType coinbase.MessageType
+	size      string
+	price     string
+	message   string
+}
+
+func (m *matchesIn) toMatch(productID coinbase.ProductID) *coinbase.Match {
+	return &coinbase.Match{
+		Type:      m.matchType,
+		ProductID: productID,
+		Size:      m.size,
+		Price:     m.price,
+		Message:   m.message,
+	}
+}
+
+// writeJSONRequestToProductID will return the productID of writeJSONRequest, assuming
+// it is of type coinbase.SubscribeRequest and is subscribing to the matches channel
+// for one productID.
+func writeJSONRequestToProductID(writeJSONRequest interface{}) coinbase.ProductID {
+	subscribeRequest, ok := writeJSONRequest.(coinbase.SubscribeRequest)
+
+	if !ok ||
+		len(subscribeRequest.ProductIDs) != 0 ||
+		len(subscribeRequest.Channels) != 1 ||
+		subscribeRequest.Channels[0].Name != coinbase.ChannelNameMatches ||
+		len(subscribeRequest.Channels[0].ProductIDs) != 1 {
+		return coinbase.ProductIDUnknown
+	}
+
+	return subscribeRequest.Channels[0].ProductIDs[0]
+}
+
+// newDialerFake creates a Dialer Fake. It behaves under the assumption that connections
+// are created only for Coinbase Subscriptions to the Matches channel for one product.
+// This assumption is not validated. It will then fake matches being read from the
+// connection, one for each matchesIn, before waiting to be closes. After all reads
+// the wg is "Done"'d.
+func newDialerFake(ctx context.Context, t *testing.T, wg *sync.WaitGroup, matchesIn []*matchesIn) *DialerMock {
+	return &DialerMock{
+		DialContextFunc: func(_ context.Context, _ string, _ http.Header) (coinbase.Conn, *http.Response, error) {
+			subscribedProductID := coinbase.ProductIDUnknown
+			subscribedProductIDMu := sync.Mutex{}
+
+			readCountRemaining := int32(len(matchesIn))
+
+			closed := make(chan struct{})
+
+			return &ConnMock{
+				// Tries to set subscribedProductID.
+				WriteJSONFunc: func(v interface{}) error {
+					select {
+					case <-ctx.Done():
+						return fmt.Errorf("test ctx is done: %w", ctx.Err())
+					case <-closed:
+						return fmt.Errorf("test, WriteJSON called after close")
+					default:
+					}
+
+					productID := writeJSONRequestToProductID(v)
+					if productID == coinbase.ProductIDUnknown {
+						return nil
+					}
+
+					subscribedProductIDMu.Lock()
+					subscribedProductID = productID
+					subscribedProductIDMu.Unlock()
+
+					return nil
+				},
+
+				// Tries to read a match from matchesIn.
+				ReadJSONFunc: func(v interface{}) error {
+					select {
+					case <-ctx.Done():
+						return fmt.Errorf("test ctx is done: %w", ctx.Err())
+					case <-closed:
+						return fmt.Errorf("test, ReadJSON called after close")
+					default:
+					}
+
+					count := atomic.LoadInt32(&readCountRemaining)
+					if count == 0 {
+						<-closed
+						return fmt.Errorf("test, close called during ReadJSON")
+					}
+
+					require.IsType(t, (*coinbase.Match)(nil), v, "")
+					matchIn, ok := v.(*coinbase.Match)
+					if !ok {
+						return nil
+					}
+
+					subscribedProductIDMu.Lock()
+					productID := subscribedProductID
+					subscribedProductIDMu.Unlock()
+
+					*matchIn = *matchesIn[count-1].toMatch(productID)
+
+					defer func() {
+						if atomic.AddInt32(&readCountRemaining, -1) == 0 {
+							wg.Done()
+						}
+					}()
+
+					return nil
+				},
+
+				CloseFunc: func() error {
+					select {
+					case <-ctx.Done():
+						return fmt.Errorf("test ctx is done: %w", ctx.Err())
+					default:
+					}
+
+					close(closed)
+
+					return nil
+				},
+			}, nil, nil
+		},
+	}
 }

@@ -31,10 +31,10 @@ const (
 // channelName is a Coinbase [Channel name].
 //
 // [Channel name]: https://docs.cloud.coinbase.com/exchange/docs/websocket-channels
-type channelName string
+type ChannelName string
 
 const (
-	channelNameMatches channelName = "matches"
+	ChannelNameMatches ChannelName = "matches"
 )
 
 // SubscribeRequest can be used to [Subscribe to Coinbase Channels].
@@ -48,7 +48,7 @@ type SubscribeRequest struct {
 
 // SubscribeChannelRequest nests under SubscribeRequest.
 type SubscribeChannelRequest struct {
-	Name       channelName `json:"name"`
+	Name       ChannelName `json:"name"`
 	ProductIDs []ProductID `json:"product_ids"`
 }
 
