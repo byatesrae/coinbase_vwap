@@ -142,10 +142,10 @@ func writeJSONRequestToProductID(writeJSONRequest interface{}) coinbase.ProductI
 	return subscribeRequest.Channels[0].ProductIDs[0]
 }
 
-// newDialerFake creates a Dialer Fake. It behaves under the assumption that connections
+// newDialerFake creates a Dialer fake. It behaves under the assumption that connections
 // are created only for Coinbase Subscriptions to the Matches channel for one product.
 // This assumption is not validated. It will then fake matches being read from the
-// connection, one for each matchesIn, before waiting to be closes. After all reads
+// connection, one for each matchesIn, before waiting to be closed. After all reads
 // the wg is "Done"'d.
 func newDialerFake(ctx context.Context, t *testing.T, wg *sync.WaitGroup, matchesIn []*matchesIn) *DialerMock {
 	return &DialerMock{
@@ -196,7 +196,6 @@ func newDialerFake(ctx context.Context, t *testing.T, wg *sync.WaitGroup, matche
 						return fmt.Errorf("test, close called during ReadJSON")
 					}
 
-					require.IsType(t, (*coinbase.Match)(nil), v, "")
 					matchIn, ok := v.(*coinbase.Match)
 					if !ok {
 						return nil
