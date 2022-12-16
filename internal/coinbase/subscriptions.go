@@ -96,7 +96,7 @@ func (m *MatchesSubscription) Close(ctx context.Context) error {
 
 	if ctxDoneBeforeReadStopped {
 		// Ideally this package wouldn't be logging on a whim like this.
-		log.Printf("read loop took to long to exit: %v", ctx.Err())
+		log.Printf("[WAR] Read loop took to long to exit: %v", ctx.Err())
 	}
 
 	return nil
