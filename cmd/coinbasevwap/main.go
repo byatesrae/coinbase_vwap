@@ -22,6 +22,8 @@ func main() {
 	}
 }
 
+// runApp runs the application, connecting to Coinbase with coinbaseClient and outputting
+// the VWAPs (or errors) on output. Signal interrupt to exit.
 func runApp(coinbaseClient *coinbase.Client, output io.Writer, interrupt chan os.Signal) error {
 	ctx := context.Background()
 
@@ -61,11 +63,13 @@ func runApp(coinbaseClient *coinbase.Client, output io.Writer, interrupt chan os
 		}()
 	}
 
-	wg.Wait() // TODO: or timeout?
+	wg.Wait()
 
 	return nil
 }
 
+// subscribeToAll establishes subscriptions for each productID in productIDs using
+// coinbaseClient.
 func subscribeToAll(ctx context.Context, coinbaseClient *coinbase.Client, productIDs []coinbase.ProductID) ([]*coinbase.MatchesSubscription, error) {
 	var subscriptions []*coinbase.MatchesSubscription
 
@@ -81,6 +85,8 @@ func subscribeToAll(ctx context.Context, coinbaseClient *coinbase.Client, produc
 	return subscriptions, nil
 }
 
+// startPrintingVWAPs will start outputting VWAPs to w for each Subscription in subscriptions.
+// wg is used to signal when each VWAP output loop start/stops.
 func startPrintingVWAPs(subscriptions []*coinbase.MatchesSubscription, wg *sync.WaitGroup, w io.Writer) {
 	for _, subscription := range subscriptions {
 		read := subscription.Read()
@@ -95,6 +101,7 @@ func startPrintingVWAPs(subscriptions []*coinbase.MatchesSubscription, wg *sync.
 	}
 }
 
+// printVWAP reads a MatchResponse from read and outputs it to w for productID productID.
 func printVWAP(read <-chan *coinbase.MatchResponse, productID coinbase.ProductID, w io.Writer) {
 	vwapCalculator := vwap.NewSlidingWindowVWAP(200)
 

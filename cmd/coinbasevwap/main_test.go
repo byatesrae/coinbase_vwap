@@ -12,9 +12,10 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/byatesrae/coinbase_vwap/internal/coinbase"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/byatesrae/coinbase_vwap/internal/coinbase"
 )
 
 func TestSubscribesReadsAndExits(t *testing.T) {
