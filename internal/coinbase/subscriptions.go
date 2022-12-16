@@ -3,6 +3,7 @@ package coinbase
 import (
 	"context"
 	"fmt"
+	"log"
 )
 
 // MatchesSubscription is created by a Client to manage a subscription to the [Matches Channel].
@@ -31,9 +32,9 @@ func newMatchesSubscription(ctx context.Context, conn Conn, productID ProductID)
 		return nil, fmt.Errorf("productID is required")
 	}
 
-	request := subscribeRequest{
+	request := SubscribeRequest{
 		Type: "subscribe",
-		Channels: []subscribeChannelRequest{
+		Channels: []SubscribeChannelRequest{
 			{
 				Name: channelNameMatches,
 				ProductIDs: []ProductID{
@@ -63,8 +64,9 @@ func (m *MatchesSubscription) ProductID() ProductID {
 	return m.productID
 }
 
-// Read can be used to read from this subscription. Only messages of type "match"
-// or "last_match" are read. On error, no further messages are read.
+// Read can be used to read from this subscription. Only messages of type "match",
+// "last_match" or "error" are read. On connection error, no further messages are
+// read.
 func (m *MatchesSubscription) Read() <-chan *MatchResponse {
 	return m.read
 }
@@ -93,7 +95,8 @@ func (m *MatchesSubscription) Close(ctx context.Context) error {
 	}
 
 	if ctxDoneBeforeReadStopped {
-		return fmt.Errorf("read loop took to long to exit: %w", ctx.Err())
+		// Ideally this package wouldn't be logging on a whim like this.
+		log.Printf("read loop took to long to exit: %v", ctx.Err())
 	}
 
 	return nil

@@ -16,6 +16,7 @@ func (c *Client) dialerOrDefault() Dialer {
 		return c.Dialer
 	}
 
+	// By default, use gorilla
 	return newGorillaWebsocketDialler(nil)
 }
 

@@ -16,13 +16,13 @@ import (
 )
 
 func main() {
-	err := runApp(&coinbase.Client{}, log.Writer())
+	err := runApp(&coinbase.Client{}, log.Writer(), make(chan os.Signal, 1))
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func runApp(coinbaseClient *coinbase.Client, output io.Writer) error {
+func runApp(coinbaseClient *coinbase.Client, output io.Writer, interrupt chan os.Signal) error {
 	ctx := context.Background()
 
 	log.Print("[INF] Creating subscriptions...\n")
@@ -43,7 +43,6 @@ func runApp(coinbaseClient *coinbase.Client, output io.Writer) error {
 	wg := sync.WaitGroup{}
 	startPrintingVWAPs(subscriptions, &wg, output)
 
-	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
 	<-interrupt
@@ -62,7 +61,7 @@ func runApp(coinbaseClient *coinbase.Client, output io.Writer) error {
 		}()
 	}
 
-	wg.Wait() // or timeout
+	wg.Wait() // TODO: or timeout?
 
 	return nil
 }
@@ -84,34 +83,35 @@ func subscribeToAll(ctx context.Context, coinbaseClient *coinbase.Client, produc
 
 func startPrintingVWAPs(subscriptions []*coinbase.MatchesSubscription, wg *sync.WaitGroup, w io.Writer) {
 	for _, subscription := range subscriptions {
-		subscription := subscription
+		read := subscription.Read()
+		productID := subscription.ProductID()
 
 		wg.Add(1)
 		go func() {
-			printVWAP(subscription, w)
+			printVWAP(read, productID, w)
 
 			wg.Done()
 		}()
 	}
 }
 
-func printVWAP(subscription *coinbase.MatchesSubscription, w io.Writer) {
+func printVWAP(read <-chan *coinbase.MatchResponse, productID coinbase.ProductID, w io.Writer) {
 	vwapCalculator := vwap.NewSlidingWindowVWAP(200)
 
 	for {
-		matchResponse, ok := <-subscription.Read()
+		matchResponse, ok := <-read
 		if !ok {
 			break
 		}
 
 		units, unitPrice, err := matchResponse.ToUnitsAndUnitPrice()
 		if err != nil {
-			fmt.Fprintf(w, "%q ERROR: %v\n", subscription.ProductID(), err)
+			fmt.Fprintf(w, "%q ERROR: %v\n", productID, err)
 			continue
 		}
 
 		v := vwapCalculator.Add(units, unitPrice)
 
-		fmt.Fprintf(w, "%q: %v\n", subscription.ProductID(), v)
+		fmt.Fprintf(w, "%q: %v\n", productID, v)
 	}
 }

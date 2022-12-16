@@ -32,6 +32,8 @@ type gorillaWebsocketDialler struct {
 	d *websocket.Dialer
 }
 
+var _ Dialer = (*gorillaWebsocketDialler)(nil)
+
 func (g *gorillaWebsocketDialler) DialContext(ctx context.Context, urlStr string, requestHeader http.Header) (Conn, *http.Response, error) {
 	return g.d.DialContext(ctx, urlStr, requestHeader)
 }

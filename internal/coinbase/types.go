@@ -37,17 +37,17 @@ const (
 	channelNameMatches channelName = "matches"
 )
 
-// subscribeRequest can be used to [Subscribe to Coinbase Channels].
+// SubscribeRequest can be used to [Subscribe to Coinbase Channels].
 //
 // [Subscribe to Coinbase Channels]: https://docs.cloud.coinbase.com/exchange/docs/websocket-overview#subscribe
-type subscribeRequest struct {
+type SubscribeRequest struct {
 	Type       string                    `json:"type"`
 	ProductIDs []ProductID               `json:"product_ids"`
-	Channels   []subscribeChannelRequest `json:"channels"`
+	Channels   []SubscribeChannelRequest `json:"channels"`
 }
 
-// subscribeChannelRequest nests under subscribeRequest.
-type subscribeChannelRequest struct {
+// SubscribeChannelRequest nests under SubscribeRequest.
+type SubscribeChannelRequest struct {
 	Name       channelName `json:"name"`
 	ProductIDs []ProductID `json:"product_ids"`
 }

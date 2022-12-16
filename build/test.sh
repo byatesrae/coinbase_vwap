@@ -8,7 +8,7 @@ set -e
 echo " * Running tests ..."
 echo
 
-go test -race ./...
+go test -race -count=1 ./...
 
 echo
 echo " * Done."

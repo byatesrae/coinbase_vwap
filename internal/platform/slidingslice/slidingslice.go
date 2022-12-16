@@ -41,8 +41,8 @@ func (s *SlidingSlice[T]) At(a int) T {
 	return s.values[a]
 }
 
-// Push appends element v to the SlidingSlice. If the SlidingSlice is at capacity, the
-// first element is removed.
+// Push appends element v to the SlidingSlice. If the SlidingSlice is at capacity,
+// the first element is removed.
 func (s *SlidingSlice[T]) Push(v T) {
 	if cap(s.values) == 0 {
 		return

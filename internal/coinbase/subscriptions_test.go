@@ -173,7 +173,7 @@ func TestMatchesSubscriptionClose(t *testing.T) {
 
 		// Assert
 
-		assert.EqualError(t, err, "read loop took to long to exit: context deadline exceeded", "Close err")
+		assert.NoError(t, err, "Close err")
 	})
 
 	t.Run("blocked_reading_conn_close_err", func(t *testing.T) {
@@ -209,7 +209,7 @@ type matchesNext struct {
 }
 
 // matchesSubscriptionWithNext wraps a MatchesSubscription and provides some helper
-// methods for testing.
+// functionality for testing.
 type matchesSubscriptionWithNext struct {
 	matchesSubscription *MatchesSubscription
 
@@ -220,7 +220,7 @@ type matchesSubscriptionWithNext struct {
 
 // newMatchesSubscriptionWithNext creates a matchesSubscriptionWithNext.
 //
-//   - ctx - used to signal that the matchesNext push loop should exit. See field readIn.
+//   - ctx - can be used to signal that the push loop should exit. See field matchesSubscriptionWithNext.readIn.
 //   - writeJSONFunc- override for MatchesSubscription.Conn's WriteJSON method. If nil, a default is used.
 //   - closeFunc - override for MatchesSubscription.Conn's Close method. If nil, a default is used.
 func newMatchesSubscriptionWithNext(ctx context.Context, t *testing.T, writeJSONFunc func(v interface{}) error, closeFunc func() error) *matchesSubscriptionWithNext {
